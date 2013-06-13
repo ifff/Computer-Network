@@ -227,7 +227,7 @@ int stcp_client_send(int sockfd, void* data, unsigned int length) {
 				printf("Unsent window size is GBN_WINDOW!\n");
 			}
 		}
-		// 发送数据段直到已发送但未被确认的段数量到达GBN_WINDOW为止 
+		//  发送数据段直到已发送但未被确认的段数量到达GBN_WINDOW为止 
 		
 	}
 	else 
