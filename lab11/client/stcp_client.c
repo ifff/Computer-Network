@@ -159,12 +159,12 @@ int stcp_client_send(int sockfd, void* data, unsigned int length) {
 			memcpy(segbuf->seg.data, p, MAX_SEG_LEN);
 			p = p + MAX_SEG_LEN;
 			length -= MAX_SEG_LEN;
-			segbuf->sentTime = 0;	// ??
+			segbuf->sentTime = clock();	// ??
 			segbuf->next = NULL;
 			// 添加到segBuf链表中
 			if (tcb_table[sockfd]->sendBufTail == NULL) {	// 链表为空
 				pthread_t thread;	// 创建线程
-				int rc = pthread_create(&thread,NULL,sendBuf_timer,NULL);
+				int rc = pthread_create(&thread,NULL,sendBuf_timer,&sockfd);
 				if (rc) {
 					printf("create thread for sendBuf_timer error!\n");
 				}
@@ -189,12 +189,12 @@ int stcp_client_send(int sockfd, void* data, unsigned int length) {
 		segbuf->seg.header.rcv_win = 0;
 		segbuf->seg.header.checksum = 0;	// ??
 		memcpy(segbuf->seg.data, p, length);
-		segbuf->sentTime = 0;	// ??
+		segbuf->sentTime = clock();	// ??
 		segbuf->next = NULL;
 		// 添加到segBuf链表中
 		if (tcb_table[sockfd]->sendBufTail == NULL) {	// 链表为空
 			pthread_t thread;	// 创建线程
-			int rc = pthread_create(&thread,NULL,sendBuf_timer,NULL);
+			int rc = pthread_create(&thread,NULL,sendBuf_timer,&sockfd);
 			if (rc) {
 				printf("create thread for sendBuf_timer error!\n");
 			}
@@ -207,13 +207,15 @@ int stcp_client_send(int sockfd, void* data, unsigned int length) {
 			tcb_table[sockfd]->sendBufTail = segbuf;
 		}
 		//  发送数据段直到已发送但未被确认的段数量到达GBN_WINDOW为止 
-		while (true) {
+		while (1) {
 			int ack_sum = 0;
 			segBuf_t *q = tcb_table[sockfd]->sendBufHead;
 			for (;q != tcb_table[sockfd]->sendBufunSent; q = q->next)
 				ack_sum ++;
 			if (ack_sum < GBN_WINDOW) {
-				
+				if (tcb_table[sockfd]->sendBufunSent == NULL) break;
+				sip_sendseg(connection, &tcb_table[sockfd]->sendBufunSent->seg);
+				tcb_table[sockfd]->sendBufunSent = tcb_table[sockfd]->sendBufunSent->next;
 			}
 		}
 	}
@@ -353,5 +355,10 @@ void *seghandler(void* arg) {
 //
 void* sendBuf_timer(void* clienttcb)
 {
-  return;
+	// 检查第一个已发送但未被确认段
+	int sockfd = *(int *)clienttcb;
+	if (tcb_table[sockfd]->state == CONNCECTED && tcb_table[sockfd]->sendBufHead != NULL) {
+		
+	}
+  	return;
 }
