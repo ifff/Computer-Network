@@ -305,7 +305,6 @@ int stcp_client_close(int sockfd) {
 
 void *seghandler(void* arg) {
 	seg_t *segPtr = (seg_t*)malloc(sizeof(seg_t));
-	//while (sip_recvseg(connection, segPtr) > 0) {
 	while (1) {
 		int count = sip_recvseg(connection, segPtr);
 		if ( count > 0) {
@@ -328,12 +327,40 @@ void *seghandler(void* arg) {
 					printf("Client(SYNSENT): Get a SYNACK, state changes: SYNSENT---->CONNECTED\n");
 				}
 				break;
+				case CONNECTED:
+					if (type == DATAACK) {
+						int ack_num = segPtr->header.ack_num;	// !!!!!!!!!!!!!!!
+						segBuf_t *q = tcb_table[sockfd]->sendBufHead;
+						segBuf_t *p = NULL;
+						while (q != tcb_table[sockfd]->sendBufunSent) { //释放发送缓冲区
+							if (q->seg.header.seq_num < ack_num) {	
+								p = q;
+								q = q->next;
+								free(p);
+							}
+							else 
+								break;
+						}
+						tcb_table[sockfd]->sendBufHead = q;
+						//  发送数据段直到已发送但未被确认的段数量到达GBN_WINDOW为止 
+						int ack_sum = 0;
+						segBuf_t *q1 = tcb_table[sockfd]->sendBufHead;
+						for (;q1 != tcb_table[sockfd]->sendBufunSent; q1 = q1->next)
+							ack_sum ++;
+						while (ack_sum < GBN_WINDOW) {
+							if (tcb_table[sockfd]->sendBufunSent == NULL) break;
+							sip_sendseg(connection, &tcb_table[sockfd]->sendBufunSent->seg);
+							tcb_table[sockfd]->sendBufunSent = tcb_table[sockfd]->sendBufunSent->next;
+						}
+					}
+				break;
 				case FINWAIT:
 				if (type == FINACK) {
 					tcb_table[sockfd]->state = CLOSED;
 					printf("Client(FINWAIT): GET a FINACK, state changes: FINWAIT----->CLOSED\n");
 				}
 				break;
+				
 			}
 		}
 		else if (count == 0);	// 段数据丢失
