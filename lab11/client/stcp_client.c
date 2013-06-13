@@ -173,22 +173,11 @@ int stcp_client_send(int sockfd, void* data, unsigned int length) {
 				tcb_table[sockfd]->sendBufunSent = segbuf;
 			}
 			else {	// 添加到链表尾
-				// 检测已发送但未被确认的段数量是否达到GBN_WINDOW
-				int ack_sum = 0;
-				segBuf_t *q = tcb_table[sockfd]->sendBufHead;
-				for (;q != tcb_table[sockfd]->sendBufunSent; q = q->next)
-					ack_sum ++;
-				if (ack_sum < GBN_WINDOW) {
-					tcb_table[sockfd]->sendBufTail->next = segbuf;
-					tcb_table[sockfd]->sendBufTail = segbuf;
-				}
-				else {
-					printf("Unsent window size is GBN_WINDOW!\n");					
-					break;
-				}
+				tcb_table[sockfd]->sendBufTail->next = segbuf;
+				tcb_table[sockfd]->sendBufTail = segbuf;
 			}
 		}
-		
+		// 长度不到MAX_SEG_LEN的部分
 		segBuf_t *segbuf = (segBuf_t *)malloc(sizeof(segBuf_t));
 		segbuf->seg.header.src_port = tcb_table[sockfd]->client_portNum;
 		segbuf->seg.header.dest_port = tcb_table[sockfd]->server_portNum;
@@ -214,21 +203,19 @@ int stcp_client_send(int sockfd, void* data, unsigned int length) {
 			tcb_table[sockfd]->sendBufunSent = segbuf;
 		}
 		else {	// 添加到链表尾
-			// 检测已发送但未被确认的段数量是否达到GBN_WINDOW
+			tcb_table[sockfd]->sendBufTail->next = segbuf;
+			tcb_table[sockfd]->sendBufTail = segbuf;
+		}
+		//  发送数据段直到已发送但未被确认的段数量到达GBN_WINDOW为止 
+		while (true) {
 			int ack_sum = 0;
 			segBuf_t *q = tcb_table[sockfd]->sendBufHead;
 			for (;q != tcb_table[sockfd]->sendBufunSent; q = q->next)
 				ack_sum ++;
 			if (ack_sum < GBN_WINDOW) {
-				tcb_table[sockfd]->sendBufTail->next = segbuf;
-				tcb_table[sockfd]->sendBufTail = segbuf;
-			}
-			else {
-				printf("Unsent window size is GBN_WINDOW!\n");
+				
 			}
 		}
-		//  发送数据段直到已发送但未被确认的段数量到达GBN_WINDOW为止 
-		
 	}
 	else 
 		return -1;
