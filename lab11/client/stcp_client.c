@@ -353,12 +353,29 @@ void *seghandler(void* arg) {
 //
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 //
+int timer_sockfd;
+void check_timer() {  // 检查第一个已发送但未被确认段 
+	clock_t now = clock();
+   	if (((int)now - tcb_table[timer_sockfd]->sendBufHead->sentTime) > (DATA_TIMEOUT / 1000)) {
+		segBuf_t *q = tcb_table[timer_sockfd]->sendBufHead;
+		for (;q != tcb_table[timer_sockfd]->sendBufunSent; q = q->next)
+			sip_sendseg(connection, &q->seg);
+	}
+}
+
 void* sendBuf_timer(void* clienttcb)
 {
-	// 检查第一个已发送但未被确认段
-	int sockfd = *(int *)clienttcb;
-	if (tcb_table[sockfd]->state == CONNCECTED && tcb_table[sockfd]->sendBufHead != NULL) {
-		////////
+	// 设置定时器
+	timer_sockfd = *(int *)clienttcb;
+	if (tcb_table[timer_sockfd]->state == CONNECTED && tcb_table[timer_sockfd]->sendBufHead != NULL) {
+		// set timer 
+		struct itimerval timer;          
+	    	signal(SIGVTALRM, check_timer);
+	    	timer.it_value.tv_sec = 0;
+	    	timer.it_value.tv_usec = SENDBUF_POLLING_INTERVAL / 1000;
+	    	timer.it_interval.tv_sec = 0;
+	    	timer.it_interval.tv_usec = SENDBUF_POLLING_INTERVAL / 1000;
+	    	setitimer(ITIMER_VIRTUAL, &timer, NULL);
 	}
   	return;
 }
