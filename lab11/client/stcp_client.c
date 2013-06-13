@@ -145,7 +145,7 @@ int stcp_client_send(int sockfd, void* data, unsigned int length) {
 	if (tcb_table[sockfd]->state == CONNECTED) {
 		int seq_num = 10;
 		char *p = (char *)data;
-		while (length / MAX_SEG_LEN >= 0) {
+		while (length / MAX_SEG_LEN > 0) {
 			segBuf_t *segbuf = (segBuf_t *)malloc(sizeof(segBuf_t));
 			segbuf->seg.header.src_port = tcb_table[sockfd]->client_portNum;
 			segbuf->seg.header.dest_port = tcb_table[sockfd]->server_portNum;
@@ -188,7 +188,7 @@ int stcp_client_send(int sockfd, void* data, unsigned int length) {
 				}
 			}
 		}
-		/*
+		
 		segBuf_t *segbuf = (segBuf_t *)malloc(sizeof(segBuf_t));
 		segbuf->seg.header.src_port = tcb_table[sockfd]->client_portNum;
 		segbuf->seg.header.dest_port = tcb_table[sockfd]->server_portNum;
@@ -227,7 +227,7 @@ int stcp_client_send(int sockfd, void* data, unsigned int length) {
 				printf("Unsent window size is GBN_WINDOW!\n");
 			}
 		}
-		// 发送数据段直到已发送但未被确认的段数量到达GBN_WINDOW为止 */
+		// 发送数据段直到已发送但未被确认的段数量到达GBN_WINDOW为止 
 		
 	}
 	else 
