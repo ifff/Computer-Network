@@ -68,7 +68,8 @@ int stcp_client_sock(unsigned int client_port) {
 	tcb_table[i]->client_portNum = client_port;
 	tcb_table[i]->state = CLOSED;
 	tcb_table[i]->next_seqNum = 0;
-	tcb_table[i]->bufMutex = NULL;
+	tcb_table[i]->bufMutex = (pthread_mutex_t *)malloc(sizeof(pthread_mutex_t));
+	pthread_mutex_init(tcb_table[i]->bufMutex, NULL);
 	tcb_table[i]->sendBufHead = NULL;
 	tcb_table[i]->sendBufunSent = NULL;
 	tcb_table[i]->sendBufTail = NULL;
@@ -140,10 +141,9 @@ int stcp_client_connect(int sockfd, unsigned int server_port) {
 
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 //
-
+int seq_num = 10;
 int stcp_client_send(int sockfd, void* data, unsigned int length) {
 	if (tcb_table[sockfd]->state == CONNECTED) {
-		int seq_num = 10;
 		char *p = (char *)data;
 		while (length / MAX_SEG_LEN > 0) {
 			segBuf_t *segbuf = (segBuf_t *)malloc(sizeof(segBuf_t));
@@ -168,13 +168,17 @@ int stcp_client_send(int sockfd, void* data, unsigned int length) {
 				if (rc) {
 					printf("create thread for sendBuf_timer error!\n");
 				}
+				pthread_mutex_lock(tcb_table[sockfd]->bufMutex);
 				tcb_table[sockfd]->sendBufTail = segbuf;
 				tcb_table[sockfd]->sendBufHead = segbuf;
 				tcb_table[sockfd]->sendBufunSent = segbuf;
+				pthread_mutex_unlock(tcb_table[sockfd]->bufMutex);
 			}
 			else {	// 添加到链表尾
+				pthread_mutex_lock(tcb_table[sockfd]->bufMutex);
 				tcb_table[sockfd]->sendBufTail->next = segbuf;
 				tcb_table[sockfd]->sendBufTail = segbuf;
+				pthread_mutex_unlock(tcb_table[sockfd]->bufMutex);
 			}
 		}
 		// 长度不到MAX_SEG_LEN的部分
@@ -198,15 +202,20 @@ int stcp_client_send(int sockfd, void* data, unsigned int length) {
 			if (rc) {
 				printf("create thread for sendBuf_timer error!\n");
 			}
+			pthread_mutex_lock(tcb_table[sockfd]->bufMutex);
 			tcb_table[sockfd]->sendBufTail = segbuf;
 			tcb_table[sockfd]->sendBufHead = segbuf;
 			tcb_table[sockfd]->sendBufunSent = segbuf;
+			pthread_mutex_unlock(tcb_table[sockfd]->bufMutex);
 		}
 		else {	// 添加到链表尾
+			pthread_mutex_lock(tcb_table[sockfd]->bufMutex);
 			tcb_table[sockfd]->sendBufTail->next = segbuf;
 			tcb_table[sockfd]->sendBufTail = segbuf;
+			pthread_mutex_unlock(tcb_table[sockfd]->bufMutex);
 		}
 		//  发送数据段直到已发送但未被确认的段数量到达GBN_WINDOW为止 
+		pthread_mutex_lock(tcb_table[sockfd]->bufMutex);
 		while (1) {
 			int ack_sum = 0;
 			segBuf_t *q = tcb_table[sockfd]->sendBufHead;
@@ -217,7 +226,10 @@ int stcp_client_send(int sockfd, void* data, unsigned int length) {
 				sip_sendseg(connection, &tcb_table[sockfd]->sendBufunSent->seg);
 				tcb_table[sockfd]->sendBufunSent = tcb_table[sockfd]->sendBufunSent->next;
 			}
+			else 
+				break;
 		}
+		pthread_mutex_unlock(tcb_table[sockfd]->bufMutex);
 	}
 	else 
 		return -1;
@@ -277,6 +289,18 @@ int stcp_client_disconnect(int sockfd) {
 	tcb_table[sockfd]->state = CLOSED;
 	printf("Client(CLOSED): cann't receive FINACK after send FIN(src_port: %d, dest_port: %d)\n",
 	segPtr2->header.src_port,segPtr2->header.dest_port);
+	// 清空发送缓冲区
+	pthread_mutex_lock(tcb_table[sockfd]->bufMutex);
+	segBuf_t *p = tcb_table[sockfd]->sendBufHead;
+	while (p != NULL) {
+		segBuf_t *q = p;
+		p = p->next;
+		free(q);
+	}
+	tcb_table[sockfd]->sendBufHead = NULL;
+	tcb_table[sockfd]->sendBufunSent = NULL;
+	tcb_table[sockfd]->sendBufTail = NULL;
+	pthread_mutex_unlock(tcb_table[sockfd]->bufMutex);
 	return -1;
 }
 
@@ -289,6 +313,8 @@ int stcp_client_disconnect(int sockfd) {
 //
 
 int stcp_client_close(int sockfd) {
+	free(tcb_table[sockfd]->bufMutex);
+	tcb_table[sockfd]->bufMutex = NULL;
 	free(tcb_table[sockfd]);
 	tcb_table[sockfd] = NULL;
 	return 1;
@@ -344,6 +370,7 @@ void *seghandler(void* arg) {
 						tcb_table[sockfd]->sendBufHead = q;
 						//  发送数据段直到已发送但未被确认的段数量到达GBN_WINDOW为止 
 						int ack_sum = 0;
+						pthread_mutex_lock(tcb_table[sockfd]->bufMutex);
 						segBuf_t *q1 = tcb_table[sockfd]->sendBufHead;
 						for (;q1 != tcb_table[sockfd]->sendBufunSent; q1 = q1->next)
 							ack_sum ++;
@@ -352,6 +379,7 @@ void *seghandler(void* arg) {
 							sip_sendseg(connection, &tcb_table[sockfd]->sendBufunSent->seg);
 							tcb_table[sockfd]->sendBufunSent = tcb_table[sockfd]->sendBufunSent->next;
 						}
+						pthread_mutex_unlock(tcb_table[sockfd]->bufMutex);
 					}
 				break;
 				case FINWAIT:
@@ -381,28 +409,41 @@ void *seghandler(void* arg) {
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 //
 int timer_sockfd;
+int flag;
 void check_timer() {  // 检查第一个已发送但未被确认段 
 	clock_t now = clock();
+	pthread_mutex_lock(tcb_table[timer_sockfd]->bufMutex);
    	if (((int)now - tcb_table[timer_sockfd]->sendBufHead->sentTime) > (DATA_TIMEOUT / 1000)) {
 		segBuf_t *q = tcb_table[timer_sockfd]->sendBufHead;
 		for (;q != tcb_table[timer_sockfd]->sendBufunSent; q = q->next)
 			sip_sendseg(connection, &q->seg);
 	}
+	pthread_mutex_unlock(tcb_table[timer_sockfd]->bufMutex);
+	if (flag == 0)
+		signal(SIGVTALRM, check_timer);
 }
 
 void* sendBuf_timer(void* clienttcb)
 {
 	// 设置定时器
-	timer_sockfd = *(int *)clienttcb;
-	if (tcb_table[timer_sockfd]->state == CONNECTED && tcb_table[timer_sockfd]->sendBufHead != NULL) {
-		// set timer 
-		struct itimerval timer;          
-	    	signal(SIGVTALRM, check_timer);
-	    	timer.it_value.tv_sec = 0;
-	    	timer.it_value.tv_usec = SENDBUF_POLLING_INTERVAL / 1000;
-	    	timer.it_interval.tv_sec = 0;
-	    	timer.it_interval.tv_usec = SENDBUF_POLLING_INTERVAL / 1000;
-	    	setitimer(ITIMER_VIRTUAL, &timer, NULL);
+	while (1) {
+		flag = 0;
+		timer_sockfd = *(int *)clienttcb;
+		if (tcb_table[timer_sockfd]->state == CONNECTED && tcb_table[timer_sockfd]->sendBufHead != NULL) {
+			// set timer 
+			struct itimerval timer;          
+		    	signal(SIGVTALRM, check_timer);
+		    	timer.it_value.tv_sec = 0;
+		    	timer.it_value.tv_usec = SENDBUF_POLLING_INTERVAL / 1000;
+		    	timer.it_interval.tv_sec = 0;
+		    	timer.it_interval.tv_usec = SENDBUF_POLLING_INTERVAL / 1000;
+		    	setitimer(ITIMER_VIRTUAL, &timer, NULL);
+		}
+		else {
+			flag = 1;
+			pthread_exit(NULL);
+		}
+			
 	}
   	return;
 }
