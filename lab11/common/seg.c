@@ -111,7 +111,7 @@ int sip_recvseg(int connection, seg_t* segPtr)
 }
 
 int seglost(seg_t* segPtr) {
-	int random = rand()%100;
+	/*int random = rand()%100;
 	if(random<PKT_LOSS_RATE*100) {
 		//50%可能性丢失段
 		if(rand()%2==0) {
@@ -131,7 +131,7 @@ int seglost(seg_t* segPtr) {
 			return 0;
 		}
 	}
-	return 0;
+	return 0;*/ return 0;
 }
 
 //这个函数计算指定段的校验和.

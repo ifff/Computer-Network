@@ -87,6 +87,8 @@ int stcp_server_accept(int sockfd) {
 // 接收来自STCP客户端的数据
 //
 int stcp_server_recv(int sockfd, void* buf, unsigned int length) {
+	printf("--------------------stcp_server_recv-----------------\n");
+	printf("usedBufLen is %d, tcb_table[sockfd]->recvBuf is %s", tcb_table[sockfd]->usedBufLen,tcb_table[sockfd]->recvBuf);
 	if (length <= tcb_table[sockfd]->usedBufLen) {	// 缓冲区包含足够的数据
 		pthread_mutex_lock(tcb_table[sockfd]->bufMutex);
 		memcpy((char*)buf, tcb_table[sockfd]->recvBuf, length);
@@ -103,7 +105,7 @@ int stcp_server_recv(int sockfd, void* buf, unsigned int length) {
 		while (checkFlag == 0) {
 			sleep(RECVBUF_POLLING_INTERVAL);
 			pthread_mutex_lock(tcb_table[sockfd]->bufMutex);
-			if (length <= tcb_table[sockfd]->bufMutex) {
+			if (length <= tcb_table[sockfd]->usedBufLen) {
 				memcpy((char*)buf, tcb_table[sockfd]->recvBuf, length);
 				//更新缓冲区
 				int i;
@@ -219,10 +221,11 @@ void *seghandler(void* arg) {
 				else if (type == DATA) {
 					if (tcb_table[sockfd]->usedBufLen + MAX_SEG_LEN < RECEIVE_BUF_SIZE) {
 						int seq_num = segPtr->header.seq_num;
+						printf("Server get DATA(seq_num is %d), expect_num is %d\n",seq_num,tcb_table[sockfd]->expect_seqNum);
 						if (tcb_table[sockfd]->expect_seqNum == seq_num) {	// 序号和expect_seq_num相同
 							pthread_mutex_lock(tcb_table[sockfd]->bufMutex);
-							memcpy(tcb_table[sockfd]->recvBuf + tcb_table[sockfd]->usedBufLen, (char *)&segPtr->data,sizeof(segPtr->data));
-							tcb_table[sockfd]->usedBufLen += sizeof(segPtr->data);
+							memcpy(tcb_table[sockfd]->recvBuf + tcb_table[sockfd]->usedBufLen, (char *)&(segPtr->data),strlen(segPtr->data) + 1);
+							tcb_table[sockfd]->usedBufLen += (strlen(segPtr->data) + 1);
 							pthread_mutex_unlock(tcb_table[sockfd]->bufMutex);
 							tcb_table[sockfd]->expect_seqNum ++;
 							// send DATAACK
@@ -236,7 +239,7 @@ void *seghandler(void* arg) {
 							dataack->header.rcv_win = 0;
 							dataack->header.checksum = 0;	//?
 							sip_sendseg(connection, dataack);
-							printf("Server(CONNECTED): receive a DATA(seq_num is %d,expect_Num is %d) from client and send a DATAACK(src_port: %d, dest_port: %d)\n",seq_num, tcb_table[sockfd]->expect_seqNum, dataack->header.src_port, dataack->header.dest_port);
+							printf("Server(CONNECTED): receive a DATA(seq_num is %d) from client and send a DATAACK(src_port: %d, dest_port: %d, expect_num is %d)\n",seq_num, dataack->header.src_port, dataack->header.dest_port, tcb_table[sockfd]->expect_seqNum);
 						}
 						else {
 							// send DATAACK
@@ -250,7 +253,7 @@ void *seghandler(void* arg) {
 							dataack->header.rcv_win = 0;
 							dataack->header.checksum = 0;	//?
 							sip_sendseg(connection, dataack);
-							printf("Server(CONNECTED): receive a DATA(seq_num is %d,expect_Num is %d) from client and send a DATAACK(src_port: %d, dest_port: %d)\n",seq_num, tcb_table[sockfd]->expect_seqNum, dataack->header.src_port, dataack->header.dest_port);
+							printf("Server(CONNECTED): send a DATAACK(expect_seqNum: %d,src_port: %d, dest_port: %d)\n",seq_num, tcb_table[sockfd]->expect_seqNum, dataack->header.src_port, dataack->header.dest_port);
 						}
 					}
 				}
@@ -269,9 +272,6 @@ void *seghandler(void* arg) {
 					sip_sendseg(connection, finack);   // send FINACK
 				printf("Server(CLOSEWAIT):receive a FIN from client and resend a FINACK(src_port: %d, dest_port: %d)\n",
 					finack->header.src_port, finack->header.dest_port);
-					//sleep(CLOSEWAIT_TIMEOUT);
-					//tcb_table[sockfd]->state = CLOSED;
-					//printf("state changes: CLOSEWAIT--->CLOSED\n");
 				}
 				break;
 			}

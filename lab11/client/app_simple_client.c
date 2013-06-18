@@ -114,7 +114,6 @@ int main() {
 
 	//等待一段时间, 然后关闭连接
 	sleep(WAITTIME);
-
 	if(stcp_client_disconnect(sockfd)<0) {
 		printf("fail to disconnect from stcp server\n");
 		exit(1);

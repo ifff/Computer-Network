@@ -68,9 +68,46 @@ int sip_sendseg(int connection, seg_t* segPtr)
 //
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // 
+#define SEGSTART1 0
+#define SEGSTART2 1
+#define SEGRECV 2
+#define SEGSTOP1 3
+#define SEGSTOP2 4
 int sip_recvseg(int connection, seg_t* segPtr)
 {
-  return 0;
+	//char *buffer = (char *)malloc(1);   ???
+	char buffer;
+	int state = SEGSTART1;
+	int result;	// 判断TCP连接是否断开
+	while (state != SEGSTOP2 && ((result = recv(connection, &buffer, 1, 0)) > 0)) {
+		switch (state) {	// FSM
+			case SEGSTART1:
+				if (buffer == '!') 
+					state = SEGSTART2;
+				break;
+			case SEGSTART2:
+				if (buffer == '&') {
+					state = SEGRECV;
+					recv(connection, (char *)segPtr, sizeof(seg_t), 0);	// recv seg data
+				}
+				break;
+			case SEGRECV:
+				if (buffer == '!')
+					state = SEGSTOP1;
+				break;
+			case SEGSTOP1:
+				if (buffer == '#')
+					state = SEGSTOP2;
+				break;
+		}
+	}   	
+	if (seglost(segPtr) == 1) 	// 段丢失，可继续调用此函数
+	{
+		printf("In function sip_recvseg(), seglost is true!!\n");
+		return 0;
+	}
+	else if (result <= 0) return -1;   // 连接断开， 不再调用此函数
+	else return 1;	// 接受成功
 }
 
 int seglost(seg_t* segPtr) {
