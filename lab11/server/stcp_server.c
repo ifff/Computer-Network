@@ -87,17 +87,16 @@ int stcp_server_accept(int sockfd) {
 // 接收来自STCP客户端的数据
 //
 int stcp_server_recv(int sockfd, void* buf, unsigned int length) {
-	//printf("--------------------stcp_server_recv-----------------\n");
-	//printf("usedBufLen is %d, tcb_table[sockfd]->recvBuf is %s", tcb_table[sockfd]->usedBufLen,tcb_table[sockfd]->recvBuf);
+	printf("Server starts to receive data from client...\n\n");
 	if (length <= tcb_table[sockfd]->usedBufLen) {	// 缓冲区包含足够的数据
 		pthread_mutex_lock(tcb_table[sockfd]->bufMutex);
 		memcpy((char*)buf, tcb_table[sockfd]->recvBuf, length);
 		//更新缓冲区
 		int i;
-		for (i = 0; i < (tcb_table[sockfd]->usedBufLen - length); i ++) {
-			tcb_table[sockfd]->recvBuf[i] = tcb_table[sockfd]->recvBuf[i + length];
+		for (i = 0; i < (tcb_table[sockfd]->usedBufLen - MAX_SEG_LEN); i ++) {
+			tcb_table[sockfd]->recvBuf[i] = tcb_table[sockfd]->recvBuf[i + MAX_SEG_LEN];
 		}
-		tcb_table[sockfd]->usedBufLen -= length;
+		tcb_table[sockfd]->usedBufLen -= MAX_SEG_LEN;
 		pthread_mutex_unlock(tcb_table[sockfd]->bufMutex);
 	}
 	else {
@@ -108,11 +107,12 @@ int stcp_server_recv(int sockfd, void* buf, unsigned int length) {
 			if (length <= tcb_table[sockfd]->usedBufLen) {
 				memcpy((char*)buf, tcb_table[sockfd]->recvBuf, length);
 				//更新缓冲区
+				int removeLength = (length / MAX_SEG_LEN + 1) * MAX_SEG_LEN;
 				int i;
-				for (i = 0; i < (tcb_table[sockfd]->usedBufLen - length); i ++) {
-					tcb_table[sockfd]->recvBuf[i] = tcb_table[sockfd]->recvBuf[i + length];
+				for (i = 0; i < (tcb_table[sockfd]->usedBufLen - removeLength); i ++) {
+					tcb_table[sockfd]->recvBuf[i] = tcb_table[sockfd]->recvBuf[i + removeLength];
 				}
-				tcb_table[sockfd]->usedBufLen -= length;
+				tcb_table[sockfd]->usedBufLen -= removeLength;
 				checkFlag = 1;
 			}
 			pthread_mutex_unlock(tcb_table[sockfd]->bufMutex);			
@@ -221,11 +221,11 @@ void *seghandler(void* arg) {
 				else if (type == DATA) {
 					if (tcb_table[sockfd]->usedBufLen + MAX_SEG_LEN < RECEIVE_BUF_SIZE) {
 						int seq_num = segPtr->header.seq_num;
-						printf("Server get DATA(seq_num is %d), expect_num is %d\n",seq_num,tcb_table[sockfd]->expect_seqNum);
+						//printf("Server get DATA(seq_num is %d), expect_num is %d\n",seq_num,tcb_table[sockfd]->expect_seqNum);
 						if (tcb_table[sockfd]->expect_seqNum == seq_num) {	// 序号和expect_seq_num相同
 							pthread_mutex_lock(tcb_table[sockfd]->bufMutex);
-							memcpy(tcb_table[sockfd]->recvBuf + tcb_table[sockfd]->usedBufLen, (char *)&(segPtr->data),strlen(segPtr->data) + 1);
-							tcb_table[sockfd]->usedBufLen += (strlen(segPtr->data) + 1);
+							memcpy(tcb_table[sockfd]->recvBuf + tcb_table[sockfd]->usedBufLen, segPtr->data,MAX_SEG_LEN);
+							tcb_table[sockfd]->usedBufLen += MAX_SEG_LEN;
 							pthread_mutex_unlock(tcb_table[sockfd]->bufMutex);
 							tcb_table[sockfd]->expect_seqNum ++;
 							// send DATAACK

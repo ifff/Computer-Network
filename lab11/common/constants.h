@@ -15,7 +15,7 @@
 //MAX_SEG_LEN = 1500 - sizeof(stcp header) - sizeof(sip header)
 #define MAX_SEG_LEN  1464
 //数据包丢失率为10%
-#define PKT_LOSS_RATE 0.1
+#define PKT_LOSS_RATE 0.5
 //SYN_TIMEOUT值, 单位为纳秒
 #define SYN_TIMEOUT 100000000
 //FIN_TIMEOUT值, 单位为纳秒

@@ -128,9 +128,9 @@ int stcp_client_connect(int sockfd, unsigned int server_port) {
 //
 //int seq_num = 10;
 int stcp_client_send(int sockfd, void* data, unsigned int length) {
+	printf("Client starts to send data to server...\n\n");
 	if (tcb_table[sockfd]->state == CONNECTED) {
 		char *p = (char *)data;
-		//printf("In send(), sockfd is %d, length is %d, data is %s\n", sockfd, length, (char *)data);
 		while (length / MAX_SEG_LEN > 0) {
 			segBuf_t *segbuf = (segBuf_t *)malloc(sizeof(segBuf_t));
 			segbuf->seg.header.src_port = tcb_table[sockfd]->client_portNum;
@@ -179,7 +179,7 @@ int stcp_client_send(int sockfd, void* data, unsigned int length) {
 		segbuf->seg.header.seq_num = tcb_table[sockfd]->next_seqNum;	//??
 		tcb_table[sockfd]->next_seqNum ++;
 		segbuf->seg.header.ack_num = 0; // ??
-		segbuf->seg.header.length = length;
+		segbuf->seg.header.length = MAX_SEG_LEN;
 		segbuf->seg.header.type = DATA;
 		segbuf->seg.header.rcv_win = 0;
 		segbuf->seg.header.checksum = 0;	// ??
@@ -222,9 +222,9 @@ int stcp_client_send(int sockfd, void* data, unsigned int length) {
 			if (tcb_table[sockfd]->sendBufunSent == NULL) break;
 			sip_sendseg(connection, &tcb_table[sockfd]->sendBufunSent->seg);
 			ack_sum ++;
-			printf("Client(CONNECTED):Send a data to server(seq_num is %d, src_port is %d, dest_port is %d)\n",
-			tcb_table[sockfd]->sendBufunSent->seg.header.seq_num,tcb_table[sockfd]->sendBufunSent->seg.header.src_port,
-			tcb_table[sockfd]->sendBufunSent->seg.header.dest_port);
+		//	printf("Client(CONNECTED):Send a data to server(seq_num is %d, src_port is %d, dest_port is %d)\n",
+			//tcb_table[sockfd]->sendBufunSent->seg.header.seq_num,tcb_table[sockfd]->sendBufunSent->seg.header.src_port,
+			//tcb_table[sockfd]->sendBufunSent->seg.header.dest_port);
 			tcb_table[sockfd]->sendBufunSent = tcb_table[sockfd]->sendBufunSent->next;
 		}
 		pthread_mutex_unlock(tcb_table[sockfd]->bufMutex);
@@ -398,19 +398,22 @@ void *seghandler(void* arg) {
 void* sendBuf_timer(void* clienttcb)
 {
 	// 设置定时器
-	printf("-------------function sendBuf_timer-------------\n");
 	int sockfd = *(int *)clienttcb;
-	printf("sockfd is %d\n", sockfd);
+	printf("!!!!!!In sendBuf_timer, sockfd is %d\n", sockfd);
 	while (1) {
 		if (tcb_table[sockfd]->state == CONNECTED && tcb_table[sockfd]->sendBufHead != NULL) {
 			// set timer 
 			clock_t now = clock();
 	        pthread_mutex_lock(tcb_table[sockfd]->bufMutex);
+	        printf("-----------------------sendBuf_timer----------------\n");
+	        printf("interval is %d\n", (int)now - tcb_table[sockfd]->sendBufHead->sentTime);
    	        if (((int)now - tcb_table[sockfd]->sendBufHead->sentTime) > (DATA_TIMEOUT / 1000)) {
 		       printf("Timeout and resend data\n");
 		       segBuf_t *q = tcb_table[sockfd]->sendBufHead;
-		       for (;q != tcb_table[sockfd]->sendBufunSent; q = q->next)
+		       for (;q != tcb_table[sockfd]->sendBufunSent; q = q->next) {
 			       sip_sendseg(connection, &q->seg);
+			     //  q->sentTime = clock();
+				   }
 	         }
             pthread_mutex_unlock(tcb_table[sockfd]->bufMutex);
 			usleep(DATA_TIMEOUT/1000);

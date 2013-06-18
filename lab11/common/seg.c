@@ -31,6 +31,7 @@
 //
 int sip_sendseg(int connection, seg_t* segPtr)
 {
+ 	segPtr->header.checksum = checksum(segPtr);
 	char *buffer = "!&";
 	if (send(connection, buffer, 2, 0) < 0) {
 		perror("Problem in sending data\n");
@@ -103,20 +104,23 @@ int sip_recvseg(int connection, seg_t* segPtr)
 	}   	
 	if (seglost(segPtr) == 1) 	// æ®µä¸¢å¤±ï¼Œå¯ç»§ç»­è°ƒç”¨æ­¤å‡½æ•°
 	{
-		printf("In function sip_recvseg(), seglost is true!!\n");
 		return 0;
 	}
+//	else if (checkchecksum(segPtr) < 0) {
+	//	 printf("checksum error!!\n");
+	//	 return 0;
+ //		 }
 	else if (result <= 0) return -1;   // è¿æ¥æ–­å¼€ï¼Œ ä¸å†è°ƒç”¨æ­¤å‡½æ•°
 	else return 1;	// æ¥å—æˆåŠŸ
 }
 
 int seglost(seg_t* segPtr) {
-	/*int random = rand()%100;
+	int random = rand()%100;
 	if(random<PKT_LOSS_RATE*100) {
 		//50%å¯èƒ½æ€§ä¸¢å¤±æ®µ
 		if(rand()%2==0) {
 			printf("seg lost!!!\n");
-      return 1;
+      		return 1;
 		}
 		//50%å¯èƒ½æ€§æ˜¯é”™è¯¯çš„æ ¡éªŒå’Œ
 		else {
@@ -131,7 +135,7 @@ int seglost(seg_t* segPtr) {
 			return 0;
 		}
 	}
-	return 0;*/ return 0;
+	return 0;
 }
 
 //è¿™ä¸ªå‡½æ•°è®¡ç®—æŒ‡å®šæ®µçš„æ ¡éªŒå’Œ.
@@ -140,11 +144,72 @@ int seglost(seg_t* segPtr) {
 //æ ¡éªŒå’Œè®¡ç®—ä½¿ç”¨1çš„è¡¥ç .
 unsigned short checksum(seg_t* segment)
 {
-  return 0;
+ 		 segment->header.checksum = 0;
+	unsigned short *pBuffer = (unsigned short*)segment;
+	unsigned int sum = 0; 
+	int length = 24 + segment->header.length;
+	if(length == 24){
+		int decrease = sizeof(unsigned short);
+		for(; length > 1; length -= decrease)
+			sum += *pBuffer++;
+		if(length == 1)
+			sum += *(unsigned char*)pBuffer;
+		sum = (sum >> 16) + (sum & 0xffff);  //½«¸ß16bitÓëµÍ16bitÏà¼Ó
+		sum += (sum >> 16);             //½«½øÎ»µ½¸ßÎ»µÄ16bitÓëµÍ16bit ÔÙÏà¼Ó
+		return (unsigned short)(~sum);
+	}
+	else{	// Êı¾İ×Ö¶Î 
+		if(segment->header.length % 2 != 0){
+			length += 1;
+			segment->data[length] = 0;
+		}
+		int decrease = sizeof(unsigned short);
+		for(; length > 1; length -= decrease)
+			sum += *pBuffer++;
+		if(length == 1)
+			sum += *(unsigned char*)pBuffer;
+		sum = (sum >> 16) + (sum & 0xffff);  //½«¸ß16bitÓëµÍ16bitÏà¼Ó
+		sum += (sum >> 16);             //½«½øÎ»µ½¸ßÎ»µÄ16bitÓëµÍ16bit ÔÙÏà¼Ó
+		return (unsigned short)(~sum);
+	}
 }
 
 //è¿™ä¸ªå‡½æ•°æ£€æŸ¥æ®µä¸­çš„æ ¡éªŒå’Œ, æ­£ç¡®æ—¶è¿”å›1, é”™è¯¯æ—¶è¿”å›-1
 int checkchecksum(seg_t* segment)
 {
-  return 0;
+  	unsigned short *pBuffer = (unsigned short*)segment;
+	unsigned int sum = 0; 
+	//Êı¾İ³¤¶ÈÎªÆæÊı£¬Ìí¼ÓÈ«Áã×Ö¶Î
+	int length = 24 + segment->header.length;
+	//SYN FINÖ»ÓĞÊ×²¿
+	if(length == 24){	// SYN FIN
+		int decrease = sizeof(unsigned short);
+		for(; length > 1; length -= decrease)
+			sum += *pBuffer++;
+		if(length == 1)
+			sum += *(unsigned char*)pBuffer;
+		sum = (sum >> 16) + (sum & 0xffff);  //½«¸ß16bitÓëµÍ16bitÏà¼Ó
+		sum += (sum >> 16);             //½«½øÎ»µ½¸ßÎ»µÄ16bitÓëµÍ16bit ÔÙÏà¼Ó
+		if((unsigned short)~sum == 0)
+			return 1;
+		else
+			return -1;
+	}
+	else{	// DATA
+		if(segment->header.length % 2 != 0){
+			length += 1;
+			segment->data[length] = 0;
+		}
+		int decrease = sizeof(unsigned short);
+		for(; length > 1; length -= decrease)
+			sum += *pBuffer++;
+		if(length == 1)
+			sum += *(unsigned char*)pBuffer;
+		sum = (sum >> 16) + (sum & 0xffff);  //½«¸ß16bitÓëµÍ16bitÏà¼Ó
+		sum += (sum >> 16);             //½«½øÎ»µ½¸ßÎ»µÄ16bitÓëµÍ16bit ÔÙÏà¼Ó
+		if((unsigned short)~sum == 0)
+			return 1;
+		else
+			return -1;
+	}
 }

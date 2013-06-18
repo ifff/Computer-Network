@@ -89,11 +89,10 @@ int main() {
 
 	//将接收到的文件数据保存到文件receivedtext.txt中
 	FILE* f;
-	f = fopen("receivedtext.txt","a");
+	f = fopen("/home/b101220023/lab11/server/receivedtext.txt","a");
 	fwrite(buf,fileLen,1,f);
 	fclose(f);
 	free(buf);
-
 	sleep(WAITTIME);
 
 	//关闭STCP服务器 

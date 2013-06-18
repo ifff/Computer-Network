@@ -87,7 +87,7 @@ int main() {
 	
 	//获取sendthis.txt文件长度, 创建缓冲区并读取文件中的数据.
 	FILE *f;
-	f = fopen("sendthis.txt","r");
+	f = fopen("/home/b101220023/lab11/client/sendthis.txt","r");
 	assert(f!=NULL);
 	fseek(f,0,SEEK_END);
 	int fileLen = ftell(f);
@@ -97,6 +97,7 @@ int main() {
 	fclose(f);
 
 	//首先发送文件长度, 然后发送整个文件.
+	printf("FIle length is %d!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n", fileLen);
 	stcp_client_send(sockfd,&fileLen,sizeof(int));
     stcp_client_send(sockfd, buffer, fileLen);
 	free(buffer);
