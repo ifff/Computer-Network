@@ -145,6 +145,7 @@ int seq_num = 10;
 int stcp_client_send(int sockfd, void* data, unsigned int length) {
 	if (tcb_table[sockfd]->state == CONNECTED) {
 		char *p = (char *)data;
+		//printf("In send(), sockfd is %d, length is %d, data is %s\n", sockfd, length, (char *)data);
 		while (length / MAX_SEG_LEN > 0) {
 			segBuf_t *segbuf = (segBuf_t *)malloc(sizeof(segBuf_t));
 			segbuf->seg.header.src_port = tcb_table[sockfd]->client_portNum;
@@ -198,6 +199,7 @@ int stcp_client_send(int sockfd, void* data, unsigned int length) {
 		// 添加到segBuf链表中
 		if (tcb_table[sockfd]->sendBufTail == NULL) {	// 链表为空
 			pthread_t thread;	// 创建线程
+			printf("create thread for function sendBuf_timer\n");
 			int rc = pthread_create(&thread,NULL,sendBuf_timer,&sockfd);
 			if (rc) {
 				printf("create thread for sendBuf_timer error!\n");
@@ -224,6 +226,9 @@ int stcp_client_send(int sockfd, void* data, unsigned int length) {
 			if (ack_sum < GBN_WINDOW) {
 				if (tcb_table[sockfd]->sendBufunSent == NULL) break;
 				sip_sendseg(connection, &tcb_table[sockfd]->sendBufunSent->seg);
+				printf("Client(CONNECTED):Send a data to server(seq_num is %d, src_port is %d, dest_port is %d)\n",
+				tcb_table[sockfd]->sendBufunSent->seg.header.seq_num,tcb_table[sockfd]->sendBufunSent->seg.header.src_port,
+				tcb_table[sockfd]->sendBufunSent->seg.header.dest_port);
 				tcb_table[sockfd]->sendBufunSent = tcb_table[sockfd]->sendBufunSent->next;
 			}
 			else 
@@ -356,6 +361,7 @@ void *seghandler(void* arg) {
 				case CONNECTED:
 					if (type == DATAACK) {
 						int ack_num = segPtr->header.ack_num;	// !!!!!!!!!!!!!!!
+						//printf("Client: Get a DATAACK from Server(expect_num is %d)\n", ack_num);
 						segBuf_t *q = tcb_table[sockfd]->sendBufHead;
 						segBuf_t *p = NULL;
 						while (q != tcb_table[sockfd]->sendBufunSent) { //释放发送缓冲区
@@ -411,13 +417,20 @@ void *seghandler(void* arg) {
 int timer_sockfd;
 int flag;
 void check_timer() {  // 检查第一个已发送但未被确认段 
+	/*printf("In function check_timer\n");
+	printf("---------------------(timer)in data----------------\n");
+	segBuf_t *q = tcb_table[timer_sockfd]->sendBufHead;
+	for (;q != tcb_table[timer_sockfd]->sendBufunSent; q = q->next)
+		printf("%s\t",q->seg.data);
+	printf("\n------------------(timer)exit data---------------\n");*/
 	clock_t now = clock();
 	pthread_mutex_lock(tcb_table[timer_sockfd]->bufMutex);
-   	if (((int)now - tcb_table[timer_sockfd]->sendBufHead->sentTime) > (DATA_TIMEOUT / 1000)) {
+   	/*if (((int)now - tcb_table[timer_sockfd]->sendBufHead->sentTime) > (DATA_TIMEOUT / 1000)) {
+		//printf("Timeout and resend data\n");
 		segBuf_t *q = tcb_table[timer_sockfd]->sendBufHead;
 		for (;q != tcb_table[timer_sockfd]->sendBufunSent; q = q->next)
 			sip_sendseg(connection, &q->seg);
-	}
+	}*/
 	pthread_mutex_unlock(tcb_table[timer_sockfd]->bufMutex);
 	if (flag == 0)
 		signal(SIGVTALRM, check_timer);
@@ -426,18 +439,26 @@ void check_timer() {  // 检查第一个已发送但未被确认段
 void* sendBuf_timer(void* clienttcb)
 {
 	// 设置定时器
+	printf("-------------function sendBuf_timer-------------\n");
+	flag = 0;
+	int timer_flag = 0;
+	timer_sockfd = *(int *)clienttcb;
+	printf("timer_sockfd is %d\n", timer_sockfd);
+	if (tcb_table[timer_sockfd]->state == CONNECTED) printf("state: Connected\n");
+	if (tcb_table[timer_sockfd]->sendBufHead == NULL) printf("head is null\n");
 	while (1) {
-		flag = 0;
-		timer_sockfd = *(int *)clienttcb;
 		if (tcb_table[timer_sockfd]->state == CONNECTED && tcb_table[timer_sockfd]->sendBufHead != NULL) {
 			// set timer 
-			struct itimerval timer;          
-		    	signal(SIGVTALRM, check_timer);
-		    	timer.it_value.tv_sec = 0;
-		    	timer.it_value.tv_usec = SENDBUF_POLLING_INTERVAL / 1000;
-		    	timer.it_interval.tv_sec = 0;
-		    	timer.it_interval.tv_usec = SENDBUF_POLLING_INTERVAL / 1000;
-		    	setitimer(ITIMER_VIRTUAL, &timer, NULL);
+			if (timer_flag == 0) {
+				struct itimerval timer;          
+			    	timer.it_value.tv_sec = 0;
+			    	timer.it_value.tv_usec = SENDBUF_POLLING_INTERVAL / 1000;
+			    	timer.it_interval.tv_sec = 0;
+			    	timer.it_interval.tv_usec = SENDBUF_POLLING_INTERVAL / 1000;
+			    	setitimer(ITIMER_VIRTUAL, &timer, NULL);
+				signal(SIGVTALRM, check_timer);
+				timer_flag = 1;
+			}
 		}
 		else {
 			flag = 1;
