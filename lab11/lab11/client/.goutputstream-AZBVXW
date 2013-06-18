@@ -1,0 +1,10 @@
+#include <stdlib.h>
+#include <stdio.h>
+#include <sys/socket.h>
+#include <sys/time.h>
+#include <time.h>
+#include <pthread.h>
+#include "stcp_client.h"
+#include <unistd.h>
+#include <signal.h>
+/*
