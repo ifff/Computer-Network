@@ -253,7 +253,7 @@ void *seghandler(void* arg) {
 							dataack->header.rcv_win = 0;
 							dataack->header.checksum = 0;	//?
 							sip_sendseg(connection, dataack);
-							printf("Server(CONNECTED): send a DATAACK(expect_seqNum: %d,src_port: %d, dest_port: %d)\n",stcb_table[sockfd]->expect_seqNum, dataack->header.src_port, dataack->header.dest_port);
+							printf("Server(CONNECTED): send a DATAACK(expect_seqNum: %d,src_port: %d, dest_port: %d)\n",tcb_table[sockfd]->expect_seqNum, dataack->header.src_port, dataack->header.dest_port);
 						}
 					}
 				}

@@ -369,7 +369,7 @@ void *seghandler(void* arg) {
 							ack_sum ++;
 							tcb_table[sockfd]->sendBufunSent = tcb_table[sockfd]->sendBufunSent->next;
 						}
-						//printf("ack_sum is %d-----------------------------\n", ack_sum);
+						printf("ack_sum is %d-----------------------------\n", ack_sum);
 						pthread_mutex_unlock(tcb_table[sockfd]->bufMutex);
 					}
 				break;
@@ -407,28 +407,28 @@ void* sendBuf_timer(void* clienttcb)
 {
 	// 设置定时器
 	int sockfd = *(int *)clienttcb;
-	//printf("!!!!!!In sendBuf_timer, sockfd is %d\n", sockfd);
-	/*if (tcb_table[sockfd]->sendBufHead == NULL)
+	printf("!!!!!!In sendBuf_timer, sockfd is %d\n", sockfd);
+	if (tcb_table[sockfd]->sendBufHead == NULL)
 	{
 		printf("sendBufHead is Null\n");
 	}
 	if (tcb_table[sockfd]->state == CONNECTED)
 	{
 		printf("state:CONNECTED\n");
-	}*/
+	}
 	while (1) {
 		if (tcb_table[sockfd]->state == CONNECTED && tcb_table[sockfd]->sendBufHead != NULL) {
 			// set timer 
 			time_t now;
 			time(&now);
-			//printf("-----------------------sendBuf_timer----------------\n");
-	       // printf("now is %d, interval is %d,sentTime is %d\n", (int)now,(int)now - tcb_table[sockfd]->sendBufHead->sentTime,tcb_table[sockfd]->sendBufHead->sentTime);
+			printf("-----------------------sendBuf_timer----------------\n");
+	        printf("now is %d, interval is %d,sentTime is %d\n", (int)now,(int)now - tcb_table[sockfd]->sendBufHead->sentTime,tcb_table[sockfd]->sendBufHead->sentTime);
 	        pthread_mutex_lock(tcb_table[sockfd]->bufMutex);
    	        if (((int)now - tcb_table[sockfd]->sendBufHead->sentTime) >= 1) {
 		       printf("Timeout and resend data\n");
 		       segBuf_t *q = tcb_table[sockfd]->sendBufHead;
 		       for (;q != tcb_table[sockfd]->sendBufunSent; q = q->next) {
-				   //printf("Client send data to server(seq_num is %d)\n", q->seg.header.seq_num);
+				   printf("Client send data to server(seq_num is %d)\n", q->seg.header.seq_num);
 			       sip_sendseg(connection, &q->seg);
 			     //  q->sentTime = clock();
 				   }

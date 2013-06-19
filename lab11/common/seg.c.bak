@@ -115,7 +115,7 @@ int sip_recvseg(int connection, seg_t* segPtr)
 }
 
 int seglost(seg_t* segPtr) {
-	int random = rand()%100;
+/*	int random = rand()%100;
 	if(random<PKT_LOSS_RATE*100) {
 		//50%鍙兘鎬т涪澶辨
 		if(rand()%2==0) {
@@ -134,7 +134,7 @@ int seglost(seg_t* segPtr) {
 			*temp = *temp^(1<<(errorbit%8));
 			return 0;
 		}
-	}
+	}*/
 	return 0;
 }
 
@@ -154,11 +154,11 @@ unsigned short checksum(seg_t* segment)
 			sum += *pBuffer++;
 		if(length == 1)
 			sum += *(unsigned char*)pBuffer;
-		sum = (sum >> 16) + (sum & 0xffff); 
-		sum += (sum >> 16);             
+		sum = (sum >> 16) + (sum & 0xffff);  //将高16bit与低16bit相加
+		sum += (sum >> 16);             //将进位到高位的16bit与低16bit 再相加
 		return (unsigned short)(~sum);
 	}
-	else{	// 锟斤拷锟斤拷锟街讹拷 
+	else{	// 数据字段 
 		if(segment->header.length % 2 != 0){
 			length += 1;
 			segment->data[length] = 0;
@@ -168,8 +168,8 @@ unsigned short checksum(seg_t* segment)
 			sum += *pBuffer++;
 		if(length == 1)
 			sum += *(unsigned char*)pBuffer;
-		sum = (sum >> 16) + (sum & 0xffff);  
-		sum += (sum >> 16);           
+		sum = (sum >> 16) + (sum & 0xffff);  //将高16bit与低16bit相加
+		sum += (sum >> 16);             //将进位到高位的16bit与低16bit 再相加
 		return (unsigned short)(~sum);
 	}
 }
@@ -179,15 +179,17 @@ int checkchecksum(seg_t* segment)
 {
   	unsigned short *pBuffer = (unsigned short*)segment;
 	unsigned int sum = 0; 
+	//数据长度为奇数，添加全零字段
 	int length = 24 + segment->header.length;
+	//SYN FIN只有首部
 	if(length == 24){	// SYN FIN
 		int decrease = sizeof(unsigned short);
 		for(; length > 1; length -= decrease)
 			sum += *pBuffer++;
 		if(length == 1)
 			sum += *(unsigned char*)pBuffer;
-		sum = (sum >> 16) + (sum & 0xffff);  
-		sum += (sum >> 16);             
+		sum = (sum >> 16) + (sum & 0xffff);  //将高16bit与低16bit相加
+		sum += (sum >> 16);             //将进位到高位的16bit与低16bit 再相加
 		if((unsigned short)~sum == 0)
 			return 1;
 		else
@@ -203,8 +205,8 @@ int checkchecksum(seg_t* segment)
 			sum += *pBuffer++;
 		if(length == 1)
 			sum += *(unsigned char*)pBuffer;
-		sum = (sum >> 16) + (sum & 0xffff);  
-		sum += (sum >> 16);             
+		sum = (sum >> 16) + (sum & 0xffff);  //将高16bit与低16bit相加
+		sum += (sum >> 16);             //将进位到高位的16bit与低16bit 再相加
 		if((unsigned short)~sum == 0)
 			return 1;
 		else
