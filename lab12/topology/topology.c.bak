@@ -125,7 +125,7 @@ int topology_getNbrNum()
 			count ++;
 		}
 	}
-	//printf("NbrNum count is %d\n",count);
+	printf("NbrNum count is %d\n",count);
 	return count;
 }
 

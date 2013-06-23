@@ -4,19 +4,19 @@
 //
 //创建日期: 2013年1月
 
-#include <stdio.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <string.h>
-#include <arpa/inet.h>
-#include <signal.h>
-#include <netdb.h>
-#include <assert.h>
-#include <sys/utsname.h>
 #include <pthread.h>
+#include <arpa/inet.h>
+#include <netdb.h>
 #include <unistd.h>
+#include <signal.h>
+#include <sys/utsname.h>
+#include <assert.h>
 
 #include "../common/constants.h"
 #include "../common/pkt.h"
@@ -93,7 +93,6 @@ void* routeupdate_daemon(void* arg) {
 		son_sendpkt(BROADCAST_NODEID, pkt, son_conn);
 		sleep(ROUTEUPDATE_INTERVAL);
 	}
-	return 0;
 }
 
 //这个线程处理来自SON进程的进入报文

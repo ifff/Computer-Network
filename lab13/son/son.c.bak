@@ -1,8 +1,8 @@
 //文件名: son/son.c
 //
-//描述: 这个文件实现SON进程 
+//描述: 这个文件实现SON进程
 //SON进程首先连接到所有邻居, 然后启动listen_to_neighbor线程, 每个该线程持续接收来自一个邻居的进入报文, 并将该报文转发给SIP进程. 
-//然后SON进程等待来自SIP进程的连接. 在与SIP进程建立连接之后, SON进程持续接收来自SIP进程的sendpkt_arg_t结构, 并将接收到的报文发送到重叠网络中. 
+//然后SON进程等待来自SIP进程的连接. 在与SIP进程建立连接之后, SON进程持续接收来自SIP进程的sendpkt_arg_t结构, 并将接收到的报文发送到重叠网络中.  
 //
 //创建日期: 2013年1月
 
@@ -27,8 +27,8 @@
 #include "neighbortable.h"
 
 //你应该在这个时间段内启动所有重叠网络节点上的SON进程
-#define SON_START_DELAY 15
-#define MAX_TRANSPORT_CONNECTIONS 5
+#define SON_START_DELAY 60
+
 /**************************************************************/
 //声明全局变量
 /**************************************************************/
@@ -43,7 +43,7 @@ int sip_conn;
 /**************************************************************/
 
 // 这个线程打开TCP端口CONNECTION_PORT, 等待节点ID比自己大的所有邻居的进入连接,
-// 在所有进入连接都建立后, 这个线程终止. 
+// 在所有进入连接都建立后, 这个线程终止.
 void* waitNbrs(void* arg) {
 	//你需要编写这里的代码.
 	int listenfd, connfd;
@@ -140,7 +140,7 @@ int connectNbrs() {
 }
 
 //每个listen_to_neighbor线程持续接收来自一个邻居的报文. 它将接收到的报文转发给SIP进程.
-//所有的listen_to_neighbor线程都是在到邻居的TCP连接全部建立之后启动的. 
+//所有的listen_to_neighbor线程都是在到邻居的TCP连接全部建立之后启动的.
 void* listen_to_neighbor(void* arg) {
 	//你需要编写这里的代码.
 	int index = *(int *)arg;
@@ -156,6 +156,7 @@ void* listen_to_neighbor(void* arg) {
 //在本地SIP进程连接之后, 这个函数持续接收来自SIP进程的sendpkt_arg_t结构, 并将报文发送到重叠网络中的下一跳. 
 //如果下一跳的节点ID为BROADCAST_NODEID, 报文应发送到所有邻居节点.
 void waitSIP() {
+	//你需要编写这里的代码.
 	int listenfd;
 	struct sockaddr_in servaddr, cliaddr;
 	if ((listenfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
@@ -215,7 +216,7 @@ int main() {
 
 	//创建一个邻居表
 	nt = nt_create();
-	//将sip_conn初始化为-1, 即还未与SIP进程连接
+	//将sip_conn初始化为-1, 即还未与SIP进程连接.
 	sip_conn = -1;
 	
 	//注册一个信号句柄, 用于终止进程

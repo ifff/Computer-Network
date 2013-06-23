@@ -179,7 +179,7 @@ void waitSIP() {
 	int *nextNode = (int *)malloc(sizeof(int));
 	while (getpktToSend(pkt, nextNode,sip_conn) > 0)	// 接收报文
 	{
-		if (nextNode == BROADCAST_NODEID)
+		if (*nextNode == BROADCAST_NODEID)
 		{
 			int i;
 			for (i = 0; i < nbrNum; i ++)

@@ -24,11 +24,11 @@
 //返回创建的邻居表.
 nbr_entry_t* nt_create()
 {
-	printf("-------------nt_create------------\n");
+	//printf("-------------nt_create------------\n");
 	nbr_entry_t *result = (nbr_entry_t *)malloc(sizeof(nbr_entry_t) * 3);
 	int myNode = topology_getMyNodeID();
 	FILE *fp;
-	fp = fopen("/home/b101220023/lab12/topology/topology.dat", "r");
+	fp = fopen("/home/b101220023/lab13/topology/topology.dat", "r");
 	if (fp == NULL)
 	{
 		printf("Cann't open file topology.dat\n");
@@ -45,8 +45,10 @@ nbr_entry_t* nt_create()
 		memcpy(node2, buffer + 11, 10);
 		node1[10] = 0;
 		node2[10] = 0;
+		//printf("node1 is %s, node2 is %s\n", node1, node2);
 		int node1ID = topology_getNodeIDfromname(node1);
 		int node2ID = topology_getNodeIDfromname(node2);
+		//printf("node1Id is %d, node2ID is %d\n", node1ID, node2ID);
 		if (node1ID == myNode )	// 添加邻居节点信息
 		{
 			result[count].nodeID = node2ID;
@@ -92,6 +94,7 @@ nbr_entry_t* nt_create()
 			count ++;
 		}
 	}
+	fclose(fp);
 	//printf("count is %d\n", count);
 	return result;
 }

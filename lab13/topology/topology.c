@@ -104,7 +104,7 @@ int topology_getNbrNum()
 {
 	int myNode = topology_getMyNodeID();
 	FILE *fp;
-	fp = fopen("/home/b101220023/lab12/topology/topology.dat", "r");
+	fp = fopen("/home/b101220023/lab13/topology/topology.dat", "r");
 	if (fp == NULL)
 	{
 		printf("Cann't open file topology.dat\n");
@@ -114,10 +114,12 @@ int topology_getNbrNum()
 	int count = 0;
 	while (fgets(buffer, 99, fp))
 	{
-		char *node1 = (char *)malloc(10);
-		char *node2 = (char *)malloc(10);
+		char *node1 = (char *)malloc(11);
+		char *node2 = (char *)malloc(11);
 		memcpy(node1, buffer, 10);
 		memcpy(node2, buffer + 11, 10);
+		node1[10] = 0;
+		node2[10] = 0;
 		int node1ID = topology_getNodeIDfromname(node1);
 		int node2ID = topology_getNodeIDfromname(node2);
 		if (node1ID == myNode || node2ID == myNode)	// 邻居节点信息
@@ -125,6 +127,7 @@ int topology_getNbrNum()
 			count ++;
 		}
 	}
+	fclose(fp);
 	//printf("NbrNum count is %d\n",count);
 	return count;
 }
@@ -164,8 +167,41 @@ int* topology_getNodeArray()
 //返回一个动态分配的数组, 它包含所有邻居的节点ID.  
 int* topology_getNbrArray()
 {
-	
-	return 0;
+	int nbrNum = topology_getNbrNum();
+	int *nbrArray = (int* )malloc(sizeof(int) * nbrNum);
+	int myNode = topology_getMyNodeID();
+	FILE *fp;
+	fp = fopen("/home/b101220023/lab13/topology/topology.dat", "r");
+	if (fp == NULL)
+	{
+		printf("Cann't open file topology.dat\n");
+		return 0;
+	}
+	char buffer[100];
+	int count = 0;
+	while (fgets(buffer, 99, fp))
+	{
+		char *node1 = (char *)malloc(11);
+		char *node2 = (char *)malloc(11);
+		memcpy(node1, buffer, 10);
+		memcpy(node2, buffer + 11, 10);
+		node1[10] = 0;
+		node2[10] = 0;
+		int node1ID = topology_getNodeIDfromname(node1);
+		int node2ID = topology_getNodeIDfromname(node2);
+		if (node1ID == myNode)	// 邻居节点信息
+		{
+			nbrArray[count] = node2ID;
+			count ++;
+		}
+		else if (node2ID == myNode)
+		{
+			nbrArray[count] = node1ID;
+			count ++;
+		}
+	}
+	fclose(fp);
+	return nbrArray;
 }
 
 //这个函数解析保存在文件topology.dat中的拓扑信息.
