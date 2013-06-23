@@ -150,7 +150,7 @@ void* pkthandler(void* arg) {
 					if(entry->destNodeID == pkt.header.dest_nodeID){
 						son_sendpkt(entry->nextNodeID, &pkt, son_conn);
 						//!!!!!!!!!!!!!!!!!
-						seg_t *seg = (seg_t *)&(pkt.data);
+					//	seg_t *seg = (seg_t *)&(pkt.data);
 						//printf("Transmit!!!!!!!!!!! segPtr->header.type is %d\n", seg->header.type);
 						//!!!!!!!!!!!
 						printf("-------------Transmit the packet to next node %d--------\n", entry->nextNodeID);
@@ -234,45 +234,6 @@ void sip_stop() {
 //当本地STCP进程断开连接时, 这个函数等待下一个STCP进程的连接.
 void waitSTCP() {
 	//你需要编写这里的代码.
-	/*int listenfd;
-	struct sockaddr_in servaddr, cliaddr;
-	if ((listenfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-		perror("server: Problem in creating socket\n");
-	}
-	servaddr.sin_family = AF_INET;
-	servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-	servaddr.sin_port = htons(SIP_PORT);
-	if ((bind(listenfd, (struct sockaddr *)&servaddr, sizeof(servaddr))) < 0) {
-		perror("server: Problem in binding\n");
-	}
-	listen(listenfd, MAX_TRANSPORT_CONNECTIONS);
-	socklen_t clilen = sizeof(cliaddr);
-	seg_t *recv_seg = (seg_t *)malloc(sizeof(recv_seg));
-	int myNode = topology_getMyNodeID();
-	while (1)
-	{
-		printf("before accept\n");
-		stcp_conn = accept(listenfd, (struct sockaddr *)&cliaddr, &clilen); 
-		printf("---------------wait for thread STCP ------------\n");
-		int result, dest_nodeID, next_nodeID;
-		while ((result = getsegToSend(stcp_conn, &dest_nodeID, recv_seg)) > 0)
-		{
-			printf("Receive Seg!!!!!!!!!!\n");
-			sip_pkt_t *pkt = (sip_pkt_t *)malloc(sizeof(sip_pkt_t));
-			pkt->header.src_nodeID = myNode;
-			pkt->header.dest_nodeID = dest_nodeID;
-			pkt->header.length = sizeof(seg_t);
-			pkt->header.type = SIP;
-			if (recv_seg->header.type == SYN)
-			{
-				printf("!!!!!!!!!!!!!!!!!Receive SYN!!!!!!!!!!!!!!!\n");
-			}
-			memcpy(pkt->data, recv_seg, sizeof(seg_t));		
-			next_nodeID = routingtable_getnextnode(routingtable,dest_nodeID);
-			son_sendpkt(next_nodeID, pkt, son_conn);
-		}
-		printf("--------------------STCP disconnect---------------\n");
-	}*/
 	int listenfd,connfd;
 	struct sockaddr_in cliaddr,servaddr;
 	socklen_t clilen;
@@ -293,13 +254,12 @@ void waitSTCP() {
 	while(1){
 		connfd = accept(listenfd,(struct sockaddr *)&cliaddr,&clilen);
 		stcp_conn=connfd;
-		printf("***********************waitSTCP***********************\n");
+		printf("---------------wait for thread STCP ------------\n");
 		while(1){
 			sip_pkt_t send_pkt;
-	//			printf("waitSTCP: into while loop\n");
 			int rc;
 			if((rc=getsegToSend(stcp_conn, &destNodeID,&recv_seg))==-1){
-				printf("waitSTCP:disconnect\n");
+				printf("--------------------STCP disconnect---------------\n");
 				break;
 			}
 			printf("waitSTCP: destNodeID=%d, seg->header.type is %d\n",destNodeID, recv_seg.header.type);
@@ -307,12 +267,12 @@ void waitSTCP() {
 			send_pkt.header.dest_nodeID=destNodeID;
 			send_pkt.header.length = sizeof(seg_t);
 			send_pkt.header.type = SIP;
-			memcpy(send_pkt.data,&recv_seg,sizeof(seg_t));
-			
+			memcpy(send_pkt.data,&recv_seg,sizeof(seg_t));			
 			nextNodeID = routingtable_getnextnode(routingtable,destNodeID);
 			son_sendpkt(nextNodeID,&send_pkt,son_conn);
 			
 		}
+
 	}
 	pthread_exit(NULL);
 }
