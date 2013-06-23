@@ -106,7 +106,7 @@ int sip_recvseg(int sip_conn, int* src_nodeID, seg_t* segPtr)
 //如果成功接收到sendseg_arg_t就返回1, 否则返回-1.
 int getsegToSend(int stcp_conn, int* dest_nodeID, seg_t* segPtr)
 {
-	printf("In function getsegTosend-------------\n");
+	//printf("In function getsegTosend-------------\n");
 	sendseg_arg_t *arg = (sendseg_arg_t *)malloc(sizeof(sendseg_arg_t));
 	char buffer;
 	int state = SEGSTART1;
@@ -150,7 +150,7 @@ int forwardsegToSTCP(int stcp_conn, int src_nodeID, seg_t* segPtr)
 	sendseg_arg_t *arg = (sendseg_arg_t *)malloc(sizeof(sendseg_arg_t));
 	arg->nodeID = src_nodeID;
 	memcpy(&arg->seg, segPtr, sizeof(seg_t));
-	printf("---------------forwardsegToSTCP seg->header.type is %d---------\n", segPtr->header.type);
+	//printf("---------------forwardsegToSTCP seg->header.type is %d---------\n", segPtr->header.type);
 	char *buffer = "!&";
 	if (send(stcp_conn, buffer, 2, 0) < 0) {
 		perror("Problem in sending data\n");

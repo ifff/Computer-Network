@@ -1,6 +1,7 @@
 // 文件名 pkt.c
 // 创建日期: 2013年1月
 #include "pkt.h"
+#include "seg.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -24,6 +25,7 @@ int son_sendpkt(int nextNodeID, sip_pkt_t* pkt, int son_conn)
 	sendpkt_arg_t *arg = (sendpkt_arg_t *)malloc(sizeof(sendpkt_arg_t));
 	arg->nextNodeID = nextNodeID;
 	memcpy((char *)&(arg->pkt), (char *)pkt, sizeof(sip_pkt_t));
+	seg_t *seg = (seg_t *)&(arg->pkt.data);
 	char *buffer = "!&";
 	if (send(son_conn, buffer, 2, 0) < 0) {
 		perror("Problem in sending data\n");
@@ -72,7 +74,7 @@ int son_recvpkt(sip_pkt_t* pkt, int son_conn)
 					state = PKTSTOP1;
 				break;
 		}
-		if (state == PKTSTOP1)
+		if (state == PKTSTOP1 && buffer == '#')
 		{
 			break;
 		}
@@ -120,7 +122,7 @@ int getpktToSend(sip_pkt_t* pkt, int* nextNode,int sip_conn)
 					state = PKTSTOP1;
 				break;
 		}
-		if (state == PKTSTOP1)
+		if (state == PKTSTOP1 && buffer == '#')
 		{
 			break;
 		}
@@ -140,12 +142,15 @@ int getpktToSend(sip_pkt_t* pkt, int* nextNode,int sip_conn)
 // 如果报文发送成功, 返回1, 否则返回-1.
 int forwardpktToSIP(sip_pkt_t* pkt, int sip_conn)
 {
+	
+	sip_pkt_t *sendpkt = (sip_pkt_t *)malloc(sizeof(sip_pkt_t));
+	memcpy((char *)sendpkt, (char *)pkt, sizeof(sip_pkt_t));
 	char *buffer = "!&";
 	if (send(sip_conn, buffer, 2, 0) < 0) {
 		perror("Problem in sending data\n");
 		return -1;
 	}	
-	buffer = (char *)pkt;
+	buffer = (char *)sendpkt;
 	if (send(sip_conn, buffer, sizeof(sip_pkt_t), 0) < 0) {
 		perror("Problem in sending data\n");
 		return -1;
@@ -155,6 +160,8 @@ int forwardpktToSIP(sip_pkt_t* pkt, int sip_conn)
 		perror("Problem in sending data\n");
 		return -1;
 	}
+	//seg_t *seg = (seg_t *)(sendpkt->data);
+	//printf("In forwardpktToSIP header.type is %d\n", seg->header.type);
 	return 1;
 }
 
@@ -213,7 +220,7 @@ int recvpkt(sip_pkt_t* pkt, int conn)
 					state = PKTSTOP1;
 				break;
 		}
-		if (state == PKTSTOP1)
+		if (state == PKTSTOP1 && buffer == '#')
 		{
 			break;
 		}

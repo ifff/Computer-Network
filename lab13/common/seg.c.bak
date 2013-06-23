@@ -53,7 +53,7 @@ int sip_sendseg(int sip_conn, int dest_nodeID, seg_t* segPtr)
 //如果成功接收到sendseg_arg_t就返回1, 否则返回-1.
 int sip_recvseg(int sip_conn, int* src_nodeID, seg_t* segPtr)
 {
-	printf("--------------In function sip_recvseg----------------\n");
+	//printf("--------------In function sip_recvseg----------------\n");
 	sendseg_arg_t *arg = (sendseg_arg_t *)malloc(sizeof(sendseg_arg_t));
 	char buffer;
 	int state = SEGSTART1;
@@ -80,7 +80,7 @@ int sip_recvseg(int sip_conn, int* src_nodeID, seg_t* segPtr)
 				break;
 		}
 	}   	
-	printf("seg->header.type is %d\n", arg->seg.header.type);
+	//printf("seg->header.type is %d\n", arg->seg.header.type);
 	if (seglost(segPtr) == 1) 	// 段丢失，可继续调用此函数
 	{
 		*src_nodeID = arg->nodeID;

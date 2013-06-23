@@ -38,14 +38,45 @@
 int connectToSIP() {
 
 	//你需要编写这里的代码.
-	
+	int sockfd;
+	struct sockaddr_in servaddr;
+	memset(&servaddr, 0, sizeof(servaddr));
+	servaddr.sin_family = AF_INET;
+	int myNode = topology_getMyNodeID();
+	if (myNode == 185)
+	{
+		servaddr.sin_addr.s_addr = inet_addr("114.212.190.185");
+	}
+	else if (myNode == 186)
+	{
+		servaddr.sin_addr.s_addr = inet_addr("114.212.190.186");
+	}
+	else if (myNode == 187)
+	{
+		servaddr.sin_addr.s_addr = inet_addr("114.212.190.187");
+	}
+	else if (myNode == 188)
+	{
+		servaddr.sin_addr.s_addr = inet_addr("114.212.190.188");
+	}
+	servaddr.sin_port = htons(SIP_PORT);
+	if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+		perror("Problem in creating the socket\n");
+		return -1;
+	}
+	if (connect(sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr)) < 0) {
+		perror("Problem in connecting to the server\n");
+		return -1;
+	}
+	return sockfd;
 }
 
 //这个函数断开到本地SIP进程的TCP连接. 
 void disconnectToSIP(int sip_conn) {
 
 	//你需要编写这里的代码.
-	
+	close(sip_conn);
+	sip_conn = -1;
 }
 
 int main() {
@@ -88,7 +119,7 @@ int main() {
 	
 	//获取sendthis.txt文件长度, 创建缓冲区并读取文件中的数据
 	FILE *f;
-	f = fopen("sendthis.txt","r");
+	f = fopen("/home/b101220023/lab13/sendthis.txt","r");
 	assert(f!=NULL);
 	fseek(f,0,SEEK_END);
 	int fileLen = ftell(f);

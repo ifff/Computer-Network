@@ -139,7 +139,8 @@ void* pkthandler(void* arg) {
 				printf("-------------The Packet reach the destination node-------------\n");
 				int src_nodeID = pkt.header.src_nodeID;
 				seg_t *segPtr = (seg_t *)malloc(sizeof(seg_t));
-				memcpy(segPtr,&pkt.data,sizeof(segPtr));	//!!!!!!!!!!!!!!!!!!!!				
+				memcpy((char *)segPtr,(char *)&(pkt.data),sizeof(seg_t));	//!!!!!!!!!!!!!!!!!!!!	
+				printf("reach!!!!!!!!! segPtr->header.type is %d\n", segPtr->header.type);
 				forwardsegToSTCP(stcp_conn,src_nodeID,segPtr);		
 			}
 			else{
@@ -148,6 +149,10 @@ void* pkthandler(void* arg) {
 				while(entry != NULL){
 					if(entry->destNodeID == pkt.header.dest_nodeID){
 						son_sendpkt(entry->nextNodeID, &pkt, son_conn);
+						//!!!!!!!!!!!!!!!!!
+						seg_t *seg = (seg_t *)&(pkt.data);
+						//printf("Transmit!!!!!!!!!!! segPtr->header.type is %d\n", seg->header.type);
+						//!!!!!!!!!!!
 						printf("-------------Transmit the packet to next node %d--------\n", entry->nextNodeID);
 						break;
 					}

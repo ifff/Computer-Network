@@ -132,14 +132,14 @@ void* pkthandler(void* arg) {
 	int nbrNum = topology_getNbrNum();
 	int count = 0;
 	while(son_recvpkt(&pkt,son_conn)>0) {
-		//printf("Routing: received a packet from neighbor %d\n",pkt.header.src_nodeID);
+		printf("Routing: received a packet from neighbor %d\n",pkt.header.src_nodeID);
 		if(pkt.header.type == SIP){
 			printf("-----------------Packet Type is SIP-------------\n");
 			if(pkt.header.dest_nodeID == myNode){
 				printf("-------------The Packet reach the destination node-------------\n");
 				int src_nodeID = pkt.header.src_nodeID;
 				seg_t *segPtr = (seg_t *)malloc(sizeof(seg_t));
-				memcpy(segPtr,&pkt.data,sizeof(segPtr));	//!!!!!!!!!!!!!!!!!!!!	
+				memcpy((char *)segPtr,(char *)&(pkt.data),sizeof(seg_t));	//!!!!!!!!!!!!!!!!!!!!	
 				printf("reach!!!!!!!!! segPtr->header.type is %d\n", segPtr->header.type);
 				forwardsegToSTCP(stcp_conn,src_nodeID,segPtr);		
 			}
@@ -151,7 +151,7 @@ void* pkthandler(void* arg) {
 						son_sendpkt(entry->nextNodeID, &pkt, son_conn);
 						//!!!!!!!!!!!!!!!!!
 						seg_t *seg = (seg_t *)&(pkt.data);
-						printf("Transmit!!!!!!!!!!! segPtr->header.type is %d\n", seg->header.type);
+						//printf("Transmit!!!!!!!!!!! segPtr->header.type is %d\n", seg->header.type);
 						//!!!!!!!!!!!
 						printf("-------------Transmit the packet to next node %d--------\n", entry->nextNodeID);
 						break;
@@ -161,7 +161,7 @@ void* pkthandler(void* arg) {
 			}
 		}
 		else{
-			//printf("-----------------Packet Type is ROUTE_UPDATE-------------\n");
+			printf("-----------------Packet Type is ROUTE_UPDATE-------------\n");
 			count ++;
 			if (count == 30)	// 打印距离向量表
 			{

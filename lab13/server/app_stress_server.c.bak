@@ -14,15 +14,15 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <arpa/inet.h>
-#include <assert.h>
 #include <string.h>
-#include <stdlib.h>
+#include <arpa/inet.h>
+#include <netdb.h>
 #include <unistd.h>
+#include <assert.h>
 #include <stdio.h>
-#include <time.h>
-
+#include <stdlib.h>
 #include "../common/constants.h"
+#include "../topology/topology.h"
 #include "stcp_server.h"
 
 //创建一个连接, 使用客户端端口号87和服务器端口号88. 
